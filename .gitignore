@@ -85,3 +85,6 @@ amplify
 src/aws-exports.js
 .amplifyrc
 .graphqlconfig.yml
+
+# package lock
+package-lock.json
