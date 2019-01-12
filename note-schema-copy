@@ -1,0 +1,6 @@
+## graphql schema that lives in unversioned amplify dir
+
+type Note @model {
+  id: ID!
+  details: String!
+}
