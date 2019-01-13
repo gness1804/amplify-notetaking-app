@@ -19,17 +19,22 @@ class App extends Component {
     });
   };
 
-  handleAddNote = e => {
-    const { noteDetails } = this.state;
+  handleAddNote = async e => {
+    const { notes, noteDetails } = this.state;
     e.preventDefault();
     const input = {
       details: noteDetails,
     };
-    API.graphql(graphqlOperation(createNote, { input }));
+    const result = await API.graphql(graphqlOperation(createNote, { input }));
+    const newNote = result.data.createNote;
+    this.setState({
+      notes: [newNote, ...notes],
+      noteDetails: '',
+    });
   };
 
   render() {
-    const { notes } = this.state;
+    const { notes, noteDetails } = this.state;
 
     return (
       <div className="flex flex-column items-center justify-center pa3 bg-washed-red">
@@ -40,6 +45,7 @@ class App extends Component {
             className="pa2 f4"
             placeholder="Write your note."
             onChange={this.handleChangeNote}
+            value={noteDetails}
           />
           <button className="pa2 f4" type="submit">
             Add Note
