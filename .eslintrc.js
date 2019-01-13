@@ -20,7 +20,7 @@ module.exports = {
   // },
   // add your custom rules here
   rules: {
-    'no-console': 'off',
+    'no-console': 'warn',
     'func-names': 'off',
     'object-shorthand': 'off',
     'no-alert': 'off',

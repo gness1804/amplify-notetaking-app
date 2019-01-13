@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { API, graphqlOperation } from 'aws-amplify';
 import { withAuthenticator } from 'aws-amplify-react';
 import NotesList from './components/NotesList';
-import { createNote } from './graphql/mutations';
+import { createNote, deleteNote } from './graphql/mutations';
 import { listNotes } from './graphql/queries';
 
 class App extends Component {
@@ -22,6 +22,23 @@ class App extends Component {
       notes,
     });
   }
+
+  handleDeleteNote = async id => {
+    const { notes } = this.state;
+    const input = {
+      id,
+    };
+    const result = await API.graphql(
+      graphqlOperation(deleteNote, {
+        input,
+      }),
+    );
+    const { id: deletedNoteId } = result.data.deleteNote;
+    const newNotes = await notes.filter(n => n.id !== deletedNoteId);
+    this.setState({
+      notes: newNotes,
+    });
+  };
 
   handleChangeNote = e => {
     this.setState({
@@ -61,7 +78,7 @@ class App extends Component {
             Add Note
           </button>
         </form>
-        <NotesList notes={notes} />
+        <NotesList notes={notes} handleDeleteNote={this.handleDeleteNote} />
       </div>
     );
   }
