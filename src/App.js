@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { API, graphqlOperation } from 'aws-amplify';
 import { withAuthenticator } from 'aws-amplify-react';
+import NotesList from './components/NotesList';
 import { createNote } from './graphql/mutations';
 import { listNotes } from './graphql/queries';
 
@@ -60,14 +61,7 @@ class App extends Component {
             Add Note
           </button>
         </form>
-        {notes.map(n => (
-          <div key={n.id} className="flex items-center">
-            <li className="list pa1 f3">{n.details}</li>
-            <button className="bg-transparent bn f4">
-              <span>&times;</span>
-            </button>
-          </div>
-        ))}
+        <NotesList notes={notes} />
       </div>
     );
   }
