@@ -129,7 +129,11 @@ class App extends Component {
             value={details}
           />
           <button className="pa2 f4" type="submit">
-            Add Note
+            {this.hasExistingNote() ? (
+              <span>Update Note</span>
+            ) : (
+              <span>Add Note</span>
+            )}
           </button>
         </form>
         <NotesList
