@@ -65,6 +65,10 @@ class App extends Component {
   handleAddNote = async e => {
     const { notes, details, id } = this.state;
     e.preventDefault();
+    if (!details) {
+      alert('Oops! Your note must include text.');
+      return;
+    }
     // check if we have an existing note. If so, update it.
     if (this.hasExistingNote()) {
       // we have an existing note. Update it in the db.
