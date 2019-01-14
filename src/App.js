@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { API, graphqlOperation } from 'aws-amplify';
 import { withAuthenticator } from 'aws-amplify-react';
 import NotesList from './components/NotesList';
-import { createNote, deleteNote } from './graphql/mutations';
+import { createNote, deleteNote, updateNote } from './graphql/mutations';
 import { listNotes } from './graphql/queries';
 
 class App extends Component {
@@ -10,7 +10,8 @@ class App extends Component {
     super(props);
 
     this.state = {
-      noteDetails: '',
+      id: '',
+      details: '',
       notes: [],
     };
   }
@@ -22,6 +23,21 @@ class App extends Component {
       notes,
     });
   }
+
+  hasExistingNote = () => {
+    const { notes, id } = this.state;
+    if (id) {
+      return notes.filter(n => n.id === id).length > 0;
+    }
+    return false;
+  };
+
+  handleSetNote = ({ id, details }) => {
+    this.setState({
+      id,
+      details,
+    });
+  };
 
   handleDeleteNote = async id => {
     const { notes } = this.state;
@@ -42,26 +58,64 @@ class App extends Component {
 
   handleChangeNote = e => {
     this.setState({
-      noteDetails: e.target.value,
+      details: e.target.value,
     });
   };
 
   handleAddNote = async e => {
-    const { notes, noteDetails } = this.state;
+    const { notes, details, id } = this.state;
     e.preventDefault();
+    // check if we have an existing note. If so, update it.
+    if (this.hasExistingNote()) {
+      // we have an existing note. Update it in the db.
+      await this.updateNote(id, details, notes);
+    } else {
+      // create a new note.
+      await this.createNoteFromScratch(details, notes);
+    }
+  };
+
+  async updateNote(id, details, notes) {
     const input = {
-      details: noteDetails,
+      id,
+      details,
+    };
+    const result = await API.graphql(
+      graphqlOperation(updateNote, {
+        input,
+      }),
+    );
+
+    const { id: targetNoteId } = result.data.updateNote;
+    const targetIndex = notes.findIndex(n => n.id === targetNoteId);
+
+    const newNotes = [
+      ...notes.slice(0, targetIndex),
+      result.data.updateNote,
+      ...notes.slice(targetIndex + 1),
+    ];
+
+    this.setState({
+      notes: newNotes,
+      details: '',
+      id: '',
+    });
+  }
+
+  async createNoteFromScratch(details, notes) {
+    const input = {
+      details,
     };
     const result = await API.graphql(graphqlOperation(createNote, { input }));
     const newNote = result.data.createNote;
     this.setState({
       notes: [newNote, ...notes],
-      noteDetails: '',
+      details: '',
     });
-  };
+  }
 
   render() {
-    const { notes, noteDetails } = this.state;
+    const { notes, details } = this.state;
 
     return (
       <div className="flex flex-column items-center justify-center pa3 bg-washed-red">
@@ -72,13 +126,17 @@ class App extends Component {
             className="pa2 f4"
             placeholder="Write your note."
             onChange={this.handleChangeNote}
-            value={noteDetails}
+            value={details}
           />
           <button className="pa2 f4" type="submit">
             Add Note
           </button>
         </form>
-        <NotesList notes={notes} handleDeleteNote={this.handleDeleteNote} />
+        <NotesList
+          notes={notes}
+          handleDeleteNote={this.handleDeleteNote}
+          handleSetNote={this.handleSetNote}
+        />
       </div>
     );
   }
