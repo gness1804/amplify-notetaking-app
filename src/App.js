@@ -4,10 +4,12 @@ import { withAuthenticator } from 'aws-amplify-react';
 import NotesList from './components/NotesList';
 import { createNote, deleteNote, updateNote } from './graphql/mutations';
 import { listNotes } from './graphql/queries';
+import { onCreateNote } from './graphql/subscriptions';
 
 class App extends Component {
   constructor(props) {
     super(props);
+    this.onCreateNoteListener = () => {};
 
     this.state = {
       id: '',
@@ -17,6 +19,26 @@ class App extends Component {
   }
 
   async componentDidMount() {
+    await this.getAllNotes();
+    const { notes } = this.state;
+    this.onCreateNoteListener = API.graphql(
+      graphqlOperation(onCreateNote),
+    ).subscribe({
+      next: noteData => {
+        const newNote = noteData.value.data.onCreateNote;
+        const prevNotes = notes.filter(n => n.id !== newNote.id);
+        this.setState({
+          notes: [...prevNotes, newNote],
+        });
+      },
+    });
+  }
+
+  componentWillUnmount() {
+    this.onCreateNoteListener.unsubscribe();
+  }
+
+  async getAllNotes() {
     const initResult = await API.graphql(graphqlOperation(listNotes));
     const notes = initResult.data.listNotes.items;
     this.setState({
@@ -75,7 +97,7 @@ class App extends Component {
       await this.updateNote(id, details, notes);
     } else {
       // create a new note.
-      await this.createNoteFromScratch(details, notes);
+      await this.createNoteFromScratch(details);
     }
   };
 
@@ -106,14 +128,12 @@ class App extends Component {
     });
   }
 
-  async createNoteFromScratch(details, notes) {
+  async createNoteFromScratch(details) {
     const input = {
       details,
     };
-    const result = await API.graphql(graphqlOperation(createNote, { input }));
-    const newNote = result.data.createNote;
+    await API.graphql(graphqlOperation(createNote, { input }));
     this.setState({
-      notes: [newNote, ...notes],
       details: '',
     });
   }
