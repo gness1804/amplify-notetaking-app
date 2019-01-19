@@ -1,6 +1,8 @@
 ## graphql schema that lives in unversioned amplify dir
+## schema lives at amplify/backend/api/amplifynotetaker/schema.graphql
 
-type Note @model {
+type Note @model @auth(rules: [{ allow: owner }]) {
   id: ID!
   details: String!
 }
+
