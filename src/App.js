@@ -4,13 +4,18 @@ import { withAuthenticator } from 'aws-amplify-react';
 import NotesList from './components/NotesList';
 import { createNote, deleteNote, updateNote } from './graphql/mutations';
 import { listNotes } from './graphql/queries';
-import { onCreateNote, onDeleteNote } from './graphql/subscriptions';
+import {
+  onCreateNote,
+  onDeleteNote,
+  onUpdateNote,
+} from './graphql/subscriptions';
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.onCreateNoteListener = () => {};
     this.onDeleteNoteListener = () => {};
+    this.onUpdateNoteListener = () => {};
 
     this.state = {
       id: '',
@@ -25,6 +30,32 @@ class App extends Component {
     // where the old state was frozen on component mount
     this.subscribeToCreateNote();
     this.subscribeToDeleteNote();
+    this.subscribeToUpdateNote();
+  }
+
+  subscribeToUpdateNote() {
+    this.onUpdateNoteListener = API.graphql(
+      graphqlOperation(onUpdateNote),
+    ).subscribe({
+      next: noteData => {
+        const { id: targetNoteId } = noteData.value.data.onUpdateNote;
+        const targetIndex = this.state.notes.findIndex(
+          n => n.id === targetNoteId,
+        );
+
+        const newNotes = [
+          ...this.state.notes.slice(0, targetIndex),
+          noteData.value.data.onUpdateNote,
+          ...this.state.notes.slice(targetIndex + 1),
+        ];
+
+        this.setState({
+          notes: newNotes,
+          details: '',
+          id: '',
+        });
+      },
+    });
   }
 
   subscribeToDeleteNote() {
@@ -58,6 +89,7 @@ class App extends Component {
   componentWillUnmount() {
     this.onCreateNoteListener.unsubscribe();
     this.onDeleteNoteListener.unsubscribe();
+    this.onUpdateNoteListener.unsubscribe();
   }
 
   async getAllNotes() {
@@ -101,7 +133,7 @@ class App extends Component {
   };
 
   handleAddNote = async e => {
-    const { notes, details, id } = this.state;
+    const { details, id } = this.state;
     e.preventDefault();
     if (!details) {
       alert('Oops! Your note must include text.');
@@ -110,38 +142,23 @@ class App extends Component {
     // check if we have an existing note. If so, update it.
     if (this.hasExistingNote()) {
       // we have an existing note. Update it in the db.
-      await this.updateNote(id, details, notes);
+      await this.updateNote(id, details);
     } else {
       // create a new note.
       await this.createNoteFromScratch(details);
     }
   };
 
-  async updateNote(id, details, notes) {
+  async updateNote(id, details) {
     const input = {
       id,
       details,
     };
-    const result = await API.graphql(
+    await API.graphql(
       graphqlOperation(updateNote, {
         input,
       }),
     );
-
-    const { id: targetNoteId } = result.data.updateNote;
-    const targetIndex = notes.findIndex(n => n.id === targetNoteId);
-
-    const newNotes = [
-      ...notes.slice(0, targetIndex),
-      result.data.updateNote,
-      ...notes.slice(targetIndex + 1),
-    ];
-
-    this.setState({
-      notes: newNotes,
-      details: '',
-      id: '',
-    });
   }
 
   async createNoteFromScratch(details) {
