@@ -23,17 +23,11 @@ class App extends Component {
     await this.getAllNotes();
     // can't destructure this.state.notes here because it was causing a bug
     // where the old state was frozen on component mount
-    this.onCreateNoteListener = API.graphql(
-      graphqlOperation(onCreateNote),
-    ).subscribe({
-      next: noteData => {
-        const newNote = noteData.value.data.onCreateNote;
-        const prevNotes = this.state.notes.filter(n => n.id !== newNote.id);
-        this.setState({
-          notes: [...prevNotes, newNote],
-        });
-      },
-    });
+    this.subscribeToCreateNote();
+    this.subscribeToDeleteNote();
+  }
+
+  subscribeToDeleteNote() {
     this.onDeleteNoteListener = API.graphql(
       graphqlOperation(onDeleteNote),
     ).subscribe({
@@ -42,6 +36,20 @@ class App extends Component {
         const newNotes = this.state.notes.filter(n => n.id !== deletedNoteId);
         this.setState({
           notes: newNotes,
+        });
+      },
+    });
+  }
+
+  subscribeToCreateNote() {
+    this.onCreateNoteListener = API.graphql(
+      graphqlOperation(onCreateNote),
+    ).subscribe({
+      next: noteData => {
+        const newNote = noteData.value.data.onCreateNote;
+        const prevNotes = this.state.notes.filter(n => n.id !== newNote.id);
+        this.setState({
+          notes: [...prevNotes, newNote],
         });
       },
     });
