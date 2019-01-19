@@ -4,10 +4,18 @@ import { withAuthenticator } from 'aws-amplify-react';
 import NotesList from './components/NotesList';
 import { createNote, deleteNote, updateNote } from './graphql/mutations';
 import { listNotes } from './graphql/queries';
+import {
+  onCreateNote,
+  onDeleteNote,
+  onUpdateNote,
+} from './graphql/subscriptions';
 
 class App extends Component {
   constructor(props) {
     super(props);
+    this.onCreateNoteListener = () => {};
+    this.onDeleteNoteListener = () => {};
+    this.onUpdateNoteListener = () => {};
 
     this.state = {
       id: '',
@@ -17,6 +25,74 @@ class App extends Component {
   }
 
   async componentDidMount() {
+    await this.getAllNotes();
+    // can't destructure this.state.notes here because it was causing a bug
+    // where the old state was frozen on component mount
+    this.subscribeToCreateNote();
+    this.subscribeToDeleteNote();
+    this.subscribeToUpdateNote();
+  }
+
+  subscribeToUpdateNote() {
+    this.onUpdateNoteListener = API.graphql(
+      graphqlOperation(onUpdateNote),
+    ).subscribe({
+      next: noteData => {
+        const { id: targetNoteId } = noteData.value.data.onUpdateNote;
+        const targetIndex = this.state.notes.findIndex(
+          n => n.id === targetNoteId,
+        );
+
+        const newNotes = [
+          ...this.state.notes.slice(0, targetIndex),
+          noteData.value.data.onUpdateNote,
+          ...this.state.notes.slice(targetIndex + 1),
+        ];
+
+        this.setState({
+          notes: newNotes,
+          details: '',
+          id: '',
+        });
+      },
+    });
+  }
+
+  subscribeToDeleteNote() {
+    this.onDeleteNoteListener = API.graphql(
+      graphqlOperation(onDeleteNote),
+    ).subscribe({
+      next: noteData => {
+        const { id: deletedNoteId } = noteData.value.data.onDeleteNote;
+        const newNotes = this.state.notes.filter(n => n.id !== deletedNoteId);
+        this.setState({
+          notes: newNotes,
+        });
+      },
+    });
+  }
+
+  subscribeToCreateNote() {
+    this.onCreateNoteListener = API.graphql(
+      graphqlOperation(onCreateNote),
+    ).subscribe({
+      next: noteData => {
+        const newNote = noteData.value.data.onCreateNote;
+        const prevNotes = this.state.notes.filter(n => n.id !== newNote.id);
+        this.setState({
+          notes: [...prevNotes, newNote],
+        });
+      },
+    });
+  }
+
+  componentWillUnmount() {
+    this.onCreateNoteListener.unsubscribe();
+    this.onDeleteNoteListener.unsubscribe();
+    this.onUpdateNoteListener.unsubscribe();
+  }
+
+  async getAllNotes() {
     const initResult = await API.graphql(graphqlOperation(listNotes));
     const notes = initResult.data.listNotes.items;
     this.setState({
@@ -40,20 +116,14 @@ class App extends Component {
   };
 
   handleDeleteNote = async id => {
-    const { notes } = this.state;
     const input = {
       id,
     };
-    const result = await API.graphql(
+    await API.graphql(
       graphqlOperation(deleteNote, {
         input,
       }),
     );
-    const { id: deletedNoteId } = result.data.deleteNote;
-    const newNotes = await notes.filter(n => n.id !== deletedNoteId);
-    this.setState({
-      notes: newNotes,
-    });
   };
 
   handleChangeNote = e => {
@@ -63,7 +133,7 @@ class App extends Component {
   };
 
   handleAddNote = async e => {
-    const { notes, details, id } = this.state;
+    const { details, id } = this.state;
     e.preventDefault();
     if (!details) {
       alert('Oops! Your note must include text.');
@@ -72,48 +142,31 @@ class App extends Component {
     // check if we have an existing note. If so, update it.
     if (this.hasExistingNote()) {
       // we have an existing note. Update it in the db.
-      await this.updateNote(id, details, notes);
+      await this.updateNote(id, details);
     } else {
       // create a new note.
-      await this.createNoteFromScratch(details, notes);
+      await this.createNoteFromScratch(details);
     }
   };
 
-  async updateNote(id, details, notes) {
+  async updateNote(id, details) {
     const input = {
       id,
       details,
     };
-    const result = await API.graphql(
+    await API.graphql(
       graphqlOperation(updateNote, {
         input,
       }),
     );
-
-    const { id: targetNoteId } = result.data.updateNote;
-    const targetIndex = notes.findIndex(n => n.id === targetNoteId);
-
-    const newNotes = [
-      ...notes.slice(0, targetIndex),
-      result.data.updateNote,
-      ...notes.slice(targetIndex + 1),
-    ];
-
-    this.setState({
-      notes: newNotes,
-      details: '',
-      id: '',
-    });
   }
 
-  async createNoteFromScratch(details, notes) {
+  async createNoteFromScratch(details) {
     const input = {
       details,
     };
-    const result = await API.graphql(graphqlOperation(createNote, { input }));
-    const newNote = result.data.createNote;
+    await API.graphql(graphqlOperation(createNote, { input }));
     this.setState({
-      notes: [newNote, ...notes],
       details: '',
     });
   }
