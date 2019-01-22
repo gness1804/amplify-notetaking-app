@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { API, graphqlOperation } from 'aws-amplify';
 import { withAuthenticator } from 'aws-amplify-react';
 import NotesList from './components/NotesList';
@@ -25,15 +25,14 @@ const App = () => {
     ).subscribe({
       next: noteData => {
         const { id: targetNoteId } = noteData.value.data.onUpdateNote;
-        const targetIndex = notes.findIndex(n => n.id === targetNoteId);
-
-        const newNotes = [
-          ...notes.slice(0, targetIndex),
-          noteData.value.data.onUpdateNote,
-          ...notes.slice(targetIndex + 1),
-        ];
-
-        setNotes(newNotes);
+        setNotes(prevNotes => {
+          const targetIndex = prevNotes.findIndex(n => n.id === targetNoteId);
+          return [
+            ...notes.slice(0, targetIndex),
+            noteData.value.data.onUpdateNote,
+            ...notes.slice(targetIndex + 1),
+          ];
+        });
         setDetails('');
         setId('');
       },
@@ -46,8 +45,7 @@ const App = () => {
     ).subscribe({
       next: noteData => {
         const { id: deletedNoteId } = noteData.value.data.onDeleteNote;
-        const newNotes = notes.filter(n => n.id !== deletedNoteId);
-        setNotes(newNotes);
+        setNotes(prevNotes => prevNotes.filter(n => n.id !== deletedNoteId));
       },
     });
   };
@@ -58,8 +56,10 @@ const App = () => {
     ).subscribe({
       next: noteData => {
         const newNote = noteData.value.data.onCreateNote;
-        const prevNotes = notes.filter(n => n.id !== newNote.id);
-        setNotes([...prevNotes, newNote]);
+        setNotes(prevNotes => {
+          const oldNotes = prevNotes.filter(n => n.id !== newNote.id);
+          return [...oldNotes, newNote];
+        });
       },
     });
   };
