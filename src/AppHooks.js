@@ -89,7 +89,7 @@ const App = () => {
     return false;
   };
 
-  const handleSetNote = ({ noteId, noteDetails }) => {
+  const handleSetNote = ({ id: noteId, details: noteDetails }) => {
     setId(noteId);
     setDetails(noteDetails);
   };
