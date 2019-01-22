@@ -28,9 +28,9 @@ const App = () => {
         setNotes(prevNotes => {
           const targetIndex = prevNotes.findIndex(n => n.id === targetNoteId);
           return [
-            ...notes.slice(0, targetIndex),
+            ...prevNotes.slice(0, targetIndex),
             noteData.value.data.onUpdateNote,
-            ...notes.slice(targetIndex + 1),
+            ...prevNotes.slice(targetIndex + 1),
           ];
         });
         setDetails('');
