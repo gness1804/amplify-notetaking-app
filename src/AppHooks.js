@@ -69,8 +69,8 @@ const App = () => {
     setNotes(initResult.data.listNotes.items);
   };
 
-  useEffect(async () => {
-    await getAllNotes();
+  useEffect(() => {
+    getAllNotes();
     subscribeToCreateNote();
     subscribeToDeleteNote();
     subscribeToUpdateNote();
