@@ -1,3 +1,6 @@
+See it [live!](http://amplifynotetaker-20190124193538-hostingbucket.s3-website.us-east-2.amazonaws.com/)
+
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
